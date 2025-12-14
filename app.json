@@ -1,30 +1,61 @@
 {
   "expo": {
-    "name": "EasyLiftDropApp",
-    "slug": "EasyLiftDropApp",
+    "name": "LaunderGo",
+    "slug": "laundergo-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "icon": "./assets/icons/icon-512.png",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/icons/icon-512.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "ios": {
-      "supportsTablet": true
-    },
+    "assetBundlePatterns": [
+      "assets/icons/*"
+    ],
     "android": {
+      "package": "com.shubham2338.laundergoapp",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/icons/icon-512x512-maskable.png",
+        "monochromeImage": "./assets/icons/icon-512x512-maskable.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": ""
+        }
+      }
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    }
+    "ios": {
+      "bundleIdentifier": "com.shubham2338.laundergoapp",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "LaunderGo needs camera access to take photos of your laundry items.",
+        "NSPhotoLibraryUsageDescription": "LaunderGo needs photo library access to upload images.",
+        "NSLocationWhenInUseUsageDescription": "LaunderGo needs your location to find nearby laundry services and for delivery.",
+        "NSLocationAlwaysUsageDescription": "LaunderGo needs your location to track deliveries."
+      },
+      "config": {
+        "googleMapsApiKey": ""
+      }
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "LaunderGo needs your location to find nearby services and track deliveries."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "b4575749-1aef-400e-a654-33b9d67c8995"
+      }
+    },
+    "owner": "shubham2338"
   }
 }
