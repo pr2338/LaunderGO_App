@@ -260,3 +260,9 @@ export function createCallbackScript(fnName: string, ...args: unknown[]): string
 export function createNavigationScript(url: string): string {
   return `window.location.href = ${JSON.stringify(url)}; true;`;
 }
+
+/** Navigates inside the running web app (no reload) when it supports it, else does a full load. */
+export function createInAppNavigationScript(url: string): string {
+  const target = JSON.stringify(url);
+  return `(function(){ var go = window.__appNavigate; if (!(typeof go === 'function' && go(${target}))) window.location.href = ${target}; })(); true;`;
+}

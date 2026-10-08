@@ -22,6 +22,7 @@ import {
   createEventScript,
   createCallbackScript,
   createNavigationScript,
+  createInAppNavigationScript,
 } from './src/utils/webview-bridge';
 import type { WebViewMessage } from './src/types/messages';
 import { getFCMToken, setupFCMListeners, onTokenRefresh } from './src/services/notificationService';
@@ -128,6 +129,7 @@ function MainApp() {
   const [canGoBack, setCanGoBack] = useState(false);
   const [statusBarColor, setStatusBarColor] = useState<string>(APP_CONFIG.primaryColor);
   const [bottomBarColor, setBottomBarColor] = useState<string>(APP_CONFIG.backgroundColor);
+  const [themeColor, setThemeColor] = useState<string>(APP_CONFIG.primaryColor);
   // Once the web app sets a colour explicitly (SET_THEME), auto-detection stops overriding it.
   const topColorLockedRef = useRef(false);
   const bottomColorLockedRef = useRef(false);
@@ -181,7 +183,7 @@ function MainApp() {
   const navigateTo = useCallback(
     (url: string) => {
       if (webReadyRef.current) {
-        webViewRef.current?.injectJavaScript(createNavigationScript(url));
+        webViewRef.current?.injectJavaScript(createInAppNavigationScript(url));
       } else {
         pendingNavigationRef.current = url;
       }
@@ -360,6 +362,8 @@ function MainApp() {
             break;
 
           case MESSAGE_TYPES.SET_THEME: {
+            const primary = message.payload?.primaryColor;
+            if (primary && HEX_COLOR.test(primary)) setThemeColor(primary);
             const top = message.payload?.statusBarColor;
             if (top && HEX_COLOR.test(top)) {
               topColorLockedRef.current = true;
@@ -481,6 +485,7 @@ function MainApp() {
           cacheEnabled
           setSupportMultipleWindows={false}
           allowsBackForwardNavigationGestures
+          decelerationRate="normal"
           allowsInlineMediaPlayback
           mediaPlaybackRequiresUserAction={false}
           bounces={false}
@@ -497,7 +502,7 @@ function MainApp() {
           onContentProcessDidTerminate={handleProcessGone}
           onRenderProcessGone={handleProcessGone}
         />
-        <LoadingBar ref={loadingBarRef} color={APP_CONFIG.primaryColor} />
+        <LoadingBar ref={loadingBarRef} color={themeColor} />
         {hasError && (
           <View style={StyleSheet.absoluteFill}>
             <ErrorScreen onRetry={handleRetry} />
