@@ -425,15 +425,20 @@ function MainApp() {
     return false;
   }, []);
 
-  const handleLoadStart = useCallback(() => {
+  // Android also fires onLoadStart (with loading=false) for client-side route
+  // changes (history.pushState), and never follows it with onLoadEnd. Only
+  // real page loads should reset readiness or show the loading bar.
+  const handleLoadStart = useCallback((e: { nativeEvent: { loading?: boolean } }) => {
+    if (e.nativeEvent.loading === false) return;
     webReadyRef.current = false;
     loadingBarRef.current?.start();
   }, []);
 
-  const handleLoadProgress = useCallback(
-    (e: { nativeEvent: { progress: number } }) => loadingBarRef.current?.progress(e.nativeEvent.progress),
-    []
-  );
+  const handleLoadProgress = useCallback((e: { nativeEvent: { progress: number } }) => {
+    const { progress } = e.nativeEvent;
+    if (progress >= 1) loadingBarRef.current?.finish();
+    else loadingBarRef.current?.progress(progress);
+  }, []);
 
   const handleLoadEnd = useCallback(() => {
     webReadyRef.current = true;
@@ -448,6 +453,7 @@ function MainApp() {
   }, [hideSplash]);
 
   const handleLoadError = useCallback(() => {
+    loadingBarRef.current?.finish();
     setHasError(true);
     hideSplash();
   }, [hideSplash]);
@@ -456,6 +462,7 @@ function MainApp() {
   // the user is left with a blank white screen until they force-quit the app.
   const handleProcessGone = useCallback(() => {
     webReadyRef.current = false;
+    loadingBarRef.current?.finish();
     webViewRef.current?.reload();
   }, []);
 
@@ -485,7 +492,6 @@ function MainApp() {
           cacheEnabled
           setSupportMultipleWindows={false}
           allowsBackForwardNavigationGestures
-          decelerationRate="normal"
           allowsInlineMediaPlayback
           mediaPlaybackRequiresUserAction={false}
           bounces={false}
