@@ -1,96 +1,49 @@
-import { PermissionsAndroid, Platform } from 'react-native';
-import Geolocation, { GeoPosition } from 'react-native-geolocation-service';
-import { WebView } from 'react-native-webview';
-import { RefObject } from 'react';
+import * as Location from 'expo-location';
+import { logger } from '../utils/logger';
 
-let watchId: number | null = null;
+let subscription: Location.LocationSubscription | null = null;
 
 export async function requestDriverPermissions(): Promise<boolean> {
-  if (Platform.OS === 'ios') {
-    const status = await Geolocation.requestAuthorization('whenInUse');
-    return status === 'granted';
-  }
-
   try {
-    const granted = await PermissionsAndroid.requestMultiple([
-      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-      PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
-    ]);
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') return false;
 
-    const isGranted =
-      granted['android.permission.ACCESS_FINE_LOCATION'] === 'granted';
-
-    console.log('[DRIVER] Permission:', isGranted ? 'granted' : 'denied');
-    return isGranted;
+    // Prompts the user to turn on GPS (Android) if location services are off.
+    if (!(await Location.hasServicesEnabledAsync())) {
+      await Location.enableNetworkProviderAsync().catch(() => {});
+    }
+    return true;
   } catch (err) {
-    console.log('[DRIVER] Permission error:', err);
+    logger.warn('[DRIVER] Permission error:', err);
     return false;
   }
 }
 
-export function startTracking(
-  webViewRef: RefObject<WebView>,
-  onLocationUpdate?: (coords: { latitude: number; longitude: number }) => void
-): void {
-  if (watchId !== null) {
-    console.log('[DRIVER] Already tracking');
-    return;
-  }
+export async function startTracking(
+  onLocationUpdate: (coords: { latitude: number; longitude: number }) => void
+): Promise<void> {
+  if (subscription) return;
 
-  console.log('[DRIVER] Starting live tracking');
-
-  watchId = Geolocation.watchPosition(
-    (position: GeoPosition) => {
-      const coords = {
+  subscription = await Location.watchPositionAsync(
+    {
+      accuracy: Location.Accuracy.High,
+      distanceInterval: 10,
+      timeInterval: 5000,
+    },
+    position => {
+      onLocationUpdate({
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
-      };
-
-      console.log('[DRIVER] Location:', coords);
-
-      sendToWebView(webViewRef, coords);
-
-      if (onLocationUpdate) {
-        onLocationUpdate(coords);
-      }
-    },
-    (error) => {
-      console.log('[DRIVER] Location error:', error.code, error.message);
-    },
-    {
-      enableHighAccuracy: true,
-      distanceFilter: 10,
-      interval: 5000,
-      fastestInterval: 3000,
-      showLocationDialog: true,
-      forceRequestLocation: true,
+      });
     }
   );
 }
 
 export function stopTracking(): void {
-  if (watchId !== null) {
-    console.log('[DRIVER] Stopping tracking');
-    Geolocation.clearWatch(watchId);
-    watchId = null;
-  }
-}
-
-function sendToWebView(
-  webViewRef: RefObject<WebView>,
-  coords: { latitude: number; longitude: number }
-): void {
-  webViewRef.current?.injectJavaScript(`
-    window.dispatchEvent(new CustomEvent('DRIVER_LOCATION', {
-      detail: {
-        latitude: ${coords.latitude},
-        longitude: ${coords.longitude}
-      }
-    }));
-    true;
-  `);
+  subscription?.remove();
+  subscription = null;
 }
 
 export function isTracking(): boolean {
-  return watchId !== null;
+  return subscription !== null;
 }

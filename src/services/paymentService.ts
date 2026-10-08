@@ -1,8 +1,7 @@
 import RazorpayCheckout from 'react-native-razorpay';
-import { WebView } from 'react-native-webview';
-import { RefObject } from 'react';
+import { logger } from '../utils/logger';
 
-interface PaymentPayload {
+export interface PaymentPayload {
   key: string;
   amount: number;
   currency: string;
@@ -27,36 +26,35 @@ interface PaymentResult {
   razorpay_signature: string;
 }
 
-export function openRazorpay(
-  webViewRef: RefObject<WebView>,
-  payload: PaymentPayload
-): void {
-  const { purpose, orderPayload, ...options } = payload;
+let paymentInProgress = false;
 
-  RazorpayCheckout.open(options)
-    .then((result: PaymentResult) => {
-      console.log('[PAYMENT] Success:', result.razorpay_payment_id);
-      webViewRef.current?.injectJavaScript(`
-        window.dispatchEvent(new CustomEvent('PAYMENT_SUCCESS', {
-          detail: {
-            razorpay_payment_id: '${result.razorpay_payment_id}',
-            razorpay_order_id: '${result.razorpay_order_id}',
-            razorpay_signature: '${result.razorpay_signature}',
-            purpose: '${purpose || ''}',
-            amount: ${payload.amount / 100},
-            orderPayload: ${JSON.stringify(orderPayload || null)}
-          }
-        }));
-        true;
-      `);
-    })
-    .catch((error: { code: number; description: string }) => {
-      console.log('[PAYMENT] Failed:', error.code, error.description);
-      webViewRef.current?.injectJavaScript(`
-        window.dispatchEvent(new CustomEvent('PAYMENT_FAILED', {
-          detail: { error: '${error.description || 'Payment failed'}' }
-        }));
-        true;
-      `);
+export async function openRazorpay(
+  payload: PaymentPayload,
+  dispatch: (event: 'PAYMENT_SUCCESS' | 'PAYMENT_FAILED', detail: unknown) => void
+): Promise<void> {
+  // Guard against double-taps opening two checkout sheets.
+  if (paymentInProgress) return;
+  paymentInProgress = true;
+
+  const { purpose, orderPayload, ...options } = payload;
+  try {
+    const result: PaymentResult = await RazorpayCheckout.open(options);
+    logger.log('[PAYMENT] Success:', result.razorpay_payment_id);
+    dispatch('PAYMENT_SUCCESS', {
+      razorpay_payment_id: result.razorpay_payment_id,
+      razorpay_order_id: result.razorpay_order_id,
+      razorpay_signature: result.razorpay_signature,
+      purpose: purpose || '',
+      amount: payload.amount / 100,
+      orderPayload: orderPayload ?? null,
     });
+  } catch (error: any) {
+    logger.log('[PAYMENT] Failed:', error?.code, error?.description);
+    dispatch('PAYMENT_FAILED', {
+      error: error?.description || 'Payment failed',
+      code: error?.code ?? null,
+    });
+  } finally {
+    paymentInProgress = false;
+  }
 }

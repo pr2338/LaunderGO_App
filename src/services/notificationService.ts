@@ -1,8 +1,10 @@
 import messaging from '@react-native-firebase/messaging';
 import { Platform, PermissionsAndroid } from 'react-native';
 import Sound from 'react-native-sound';
+import { logger } from '../utils/logger';
 
-Sound.setCategory('Playback');
+// mixWithOthers: don't stop the user's music just because the app launched.
+Sound.setCategory('Playback', true);
 
 let alertSound: Sound | null = null;
 
@@ -14,13 +16,13 @@ function playAlertSound(): void {
   
   alertSound = new Sound('alert_sound.mp3', Sound.MAIN_BUNDLE, (error) => {
     if (error) {
-      console.log('[SOUND] Failed to load sound:', error);
+      logger.log('[SOUND] Failed to load sound:', error);
       return;
     }
     alertSound?.setVolume(1.0);
     alertSound?.play((success) => {
       if (!success) {
-        console.log('[SOUND] Playback failed');
+        logger.log('[SOUND] Playback failed');
       }
       alertSound?.release();
       alertSound = null;
@@ -29,14 +31,14 @@ function playAlertSound(): void {
 }
 
 export async function getFCMToken(): Promise<string | null> {
-  console.log('[FCM] getFCMToken called');
+  logger.log('[FCM] getFCMToken called');
 
   try {
     if (Platform.OS === 'android' && Platform.Version >= 33) {
       const granted = await PermissionsAndroid.request(
         PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
       );
-      console.log('[FCM] Android 13+ POST_NOTIFICATIONS:', granted);
+      logger.log('[FCM] Android 13+ POST_NOTIFICATIONS:', granted);
     }
 
     const authStatus = await messaging().requestPermission();
@@ -44,17 +46,17 @@ export async function getFCMToken(): Promise<string | null> {
       authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
       authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
-    console.log('[FCM] Permission status:', authStatus, enabled ? 'granted' : 'denied');
+    logger.log('[FCM] Permission status:', authStatus, enabled ? 'granted' : 'denied');
 
     if (!enabled) {
       return null;
     }
 
     const token = await messaging().getToken();
-    console.log('[FCM] Token obtained:', token);
+    logger.log('[FCM] Token obtained');
     return token;
   } catch (error) {
-    console.log('[FCM] getFCMToken error:', error);
+    logger.log('[FCM] getFCMToken error:', error);
     return null;
   }
 }
@@ -63,7 +65,7 @@ export function setupFCMListeners(
   onNotificationPress: (data: Record<string, string>) => void,
   onForegroundMessage?: (title: string, body: string, data: Record<string, string>) => void
 ): () => void {
-  console.log('[FCM] Setting up listeners');
+  logger.log('[FCM] Setting up listeners');
 
   const unsubscribeForeground = messaging().onMessage(async (remoteMessage) => {
     const title = remoteMessage.notification?.title || 'LaunderGo';
@@ -71,7 +73,7 @@ export function setupFCMListeners(
     const data = (remoteMessage.data || {}) as Record<string, string>;
     const image = remoteMessage.notification?.android?.imageUrl || data.image || '';
     
-    console.log('[FCM] Foreground message:', { title, body, type: data.type });
+    logger.log('[FCM] Foreground message:', { title, body, type: data.type });
     
     if (data.type === 'NEW_ORDER' || data.playSound === 'true') {
       playAlertSound();
@@ -83,7 +85,7 @@ export function setupFCMListeners(
   });
 
   const unsubscribeOpened = messaging().onNotificationOpenedApp((remoteMessage) => {
-    console.log('[FCM] Notification tapped (background):', remoteMessage.data);
+    logger.log('[FCM] Notification tapped (background):', remoteMessage.data);
     if (remoteMessage.data) {
       onNotificationPress(remoteMessage.data as Record<string, string>);
     }
@@ -93,12 +95,13 @@ export function setupFCMListeners(
     .getInitialNotification()
     .then((remoteMessage) => {
       if (remoteMessage?.data) {
-        console.log('[FCM] App opened from killed state:', remoteMessage.data);
+        logger.log('[FCM] App opened from killed state:', remoteMessage.data);
         onNotificationPress(remoteMessage.data as Record<string, string>);
       }
-    });
+    })
+    .catch(() => {});
 
-  console.log('[FCM] Listeners registered');
+  logger.log('[FCM] Listeners registered');
 
   return () => {
     unsubscribeForeground();
@@ -108,7 +111,7 @@ export function setupFCMListeners(
 
 export function onTokenRefresh(callback: (newToken: string) => void): () => void {
   return messaging().onTokenRefresh((token) => {
-    console.log('[FCM] Token refreshed:', token);
+    logger.log('[FCM] Token refreshed');
     callback(token);
   });
 }

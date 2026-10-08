@@ -6,29 +6,39 @@
     "orientation": "portrait",
     "icon": "./assets/icons/lgicon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/icons/lgicon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#edebed"
-    },
     "assetBundlePatterns": [
       "assets/**/*"
     ],
+    "notification": {
+      "icon": "./assets/icons/notification-icon.png",
+      "color": "#007F7D"
+    },
     "android": {
       "package": "com.shubham2338.laundergoapp",
       "versionCode": 2,
       "googleServicesFile": "./google-services.json",
+      "allowBackup": false,
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/icons/lgicon.png",
-        "backgroundColor": "#edebed"
+        "backgroundColor": "#FFFFFF"
       },
       "permissions": [
         "VIBRATE",
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "CAMERA",
-        "READ_MEDIA_IMAGES",
         "POST_NOTIFICATIONS"
+      ],
+      "blockedPermissions": [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.SYSTEM_ALERT_WINDOW"
       ]
     },
     "ios": {
@@ -36,51 +46,101 @@
       "buildNumber": "2",
       "supportsTablet": false,
       "googleServicesFile": "./GoogleService-Info.plist",
+      "entitlements": {
+        "aps-environment": "production"
+      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "LaunderGo needs camera access to take photos of your laundry items.",
-        "NSPhotoLibraryUsageDescription": "LaunderGo needs photo library access to upload images.",
-        "NSLocationWhenInUseUsageDescription": "LaunderGo needs your location to find nearby laundry services.",
-        "NSUserTrackingUsageDescription": "This identifier will be used to deliver personalized notifications.",
-        "UIBackgroundModes": ["remote-notification"]
+        "NSCameraUsageDescription": "LaunderGo uses the camera so you can photograph your laundry items, for example to report stains or damage on an order.",
+        "NSPhotoLibraryUsageDescription": "LaunderGo lets you choose photos of your laundry items to attach to an order.",
+        "NSLocationWhenInUseUsageDescription": "LaunderGo uses your location to set your pickup and delivery address and to show nearby laundry services.",
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "C617.1",
+              "0A2A.1",
+              "3B52.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategorySystemBootTime",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "35F9.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryDiskSpace",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "E174.1",
+              "85F4.1"
+            ]
+          }
+        ]
       }
     },
     "plugins": [
       [
+        "expo-splash-screen",
+        {
+          "image": "./assets/icons/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#FFFFFF",
+          "android": {
+            "image": "./assets/icons/splash-icon.png",
+            "imageWidth": 200,
+            "backgroundColor": "#FFFFFF"
+          }
+        }
+      ],
+      [
         "expo-location",
         {
-          "locationWhenInUsePermission": "LaunderGo needs your location to find nearby services."
+          "locationWhenInUsePermission": "LaunderGo uses your location to set your pickup and delivery address and to show nearby laundry services."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "LaunderGo needs access to your photos.",
-          "cameraPermission": "LaunderGo needs camera access."
+          "photosPermission": "LaunderGo lets you choose photos of your laundry items to attach to an order.",
+          "cameraPermission": "LaunderGo uses the camera so you can photograph your laundry items, for example to report stains or damage on an order.",
+          "microphonePermission": false
         }
       ],
       "@react-native-firebase/app",
+      "@react-native-firebase/messaging",
       [
-        "@react-native-firebase/messaging",
+        "expo-build-properties",
         {
-          "android": {
-            "defaultNotificationIcon": "@drawable/ic_stat_notification"
+          "ios": {
+            "useFrameworks": "static",
+            "forceStaticLinking": [
+              "RNFBApp",
+              "RNFBMessaging"
+            ]
           }
         }
-      ]
+      ],
+      "./plugins/withAlertSound",
+      "expo-font"
     ],
     "extra": {
       "eas": {
         "projectId": "b4575749-1aef-400e-a654-33b9d67c8995"
       }
     },
-    "owner": "shubham2338",
-    "updates": {
-      "enabled": true,
-      "fallbackToCacheTimeout": 0
-    },
-    "runtimeVersion": {
-      "policy": "sdkVersion"
-    }
+    "owner": "shubham2338"
   }
 }

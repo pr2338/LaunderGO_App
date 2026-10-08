@@ -3,106 +3,64 @@ import { Alert, Linking } from 'react-native';
 
 export interface ImageResult {
   base64: string;
-  uri: string;
-  width: number;
-  height: number;
+  mimeType: string;
+  fileName: string;
 }
 
-// ─── PERMISSION HELPERS ───────────────────────────────────────────────────────
+// Base64 crosses the JS bridge into the WebView; keep payloads modest.
+const IMAGE_QUALITY = 0.6;
 
 async function ensureCameraPermission(): Promise<boolean> {
   const { status } = await ImagePicker.getCameraPermissionsAsync();
-
   if (status === 'granted') return true;
 
   const { status: requested } = await ImagePicker.requestCameraPermissionsAsync();
-
   if (requested === 'granted') return true;
 
   Alert.alert(
     'Camera Permission Required',
-    'Please allow camera access in Settings to use this feature.',
+    'Please allow camera access in Settings to take photos of your laundry.',
     [
-      { text: 'Open Settings', onPress: () => Linking.openSettings() },
       { text: 'Cancel', style: 'cancel' },
+      { text: 'Open Settings', onPress: () => Linking.openSettings() },
     ]
   );
-
   return false;
 }
 
-async function ensureMediaLibraryPermission(): Promise<boolean> {
-  const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
-
-  if (status === 'granted') return true;
-
-  const { status: requested } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-  if (requested === 'granted') return true;
-
-  Alert.alert(
-    'Gallery Permission Required',
-    'Please allow photo library access in Settings to use this feature.',
-    [
-      { text: 'Open Settings', onPress: () => Linking.openSettings() },
-      { text: 'Cancel', style: 'cancel' },
-    ]
-  );
-
-  return false;
-}
-
-// ─── REQUEST ALL UPFRONT (called during app init) ────────────────────────────
-// Call this from App.tsx initApp() so user sees permissions on first launch,
-// not the first time they tap the camera button.
-
-export async function requestAllMediaPermissionsUpfront(): Promise<void> {
-  await ImagePicker.requestCameraPermissionsAsync();
-  await ImagePicker.requestMediaLibraryPermissionsAsync();
-}
-
-// ─── LAUNCH CAMERA ───────────────────────────────────────────────────────────
-
-export async function launchCamera(): Promise<ImageResult | null> {
-  const hasPermission = await ensureCameraPermission();
-  if (!hasPermission) return null;
-
-  const result = await ImagePicker.launchCameraAsync({
-    mediaTypes: ImagePicker.MediaTypeOptions.Images,
-    quality: 0.85,
-    base64: true,
-  });
-
-  if (result.canceled || !result.assets?.[0]) return null;
-
-  const asset = result.assets[0];
+function toResult(asset: ImagePicker.ImagePickerAsset, index: number): ImageResult | null {
+  if (!asset.base64) return null;
+  const mimeType = asset.mimeType || 'image/jpeg';
+  const ext = mimeType.split('/')[1] || 'jpg';
   return {
-    base64: asset.base64 || '',
-    uri: asset.uri,
-    width: asset.width,
-    height: asset.height,
+    base64: asset.base64,
+    mimeType,
+    fileName: asset.fileName || `photo_${Date.now()}_${index}.${ext}`,
   };
 }
 
-// ─── LAUNCH IMAGE LIBRARY ────────────────────────────────────────────────────
+export async function launchCamera(): Promise<ImageResult[]> {
+  if (!(await ensureCameraPermission())) return [];
 
-export async function launchImageLibrary(multiple = false): Promise<ImageResult[]> {
-  const hasPermission = await ensureMediaLibraryPermission();
-  if (!hasPermission) return [];
-
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ImagePicker.MediaTypeOptions.Images,
-    allowsMultipleSelection: multiple,
-    quality: 0.85,
+  const result = await ImagePicker.launchCameraAsync({
+    mediaTypes: ['images'],
+    quality: IMAGE_QUALITY,
     base64: true,
   });
-
   if (result.canceled || !result.assets) return [];
+  return result.assets.map(toResult).filter((r): r is ImageResult => r !== null);
+}
 
-  return result.assets.map(asset => ({
-    base64: asset.base64 || '',
-    uri: asset.uri,
-    width: asset.width,
-    height: asset.height,
-  }));
+// The system photo picker (Android 13+ / iOS 14+) needs no library permission,
+// which also keeps us compliant with Play's photo-permission policy.
+export async function launchImageLibrary(multiple = false): Promise<ImageResult[]> {
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    allowsMultipleSelection: multiple,
+    selectionLimit: multiple ? 10 : 1,
+    quality: IMAGE_QUALITY,
+    base64: true,
+  });
+  if (result.canceled || !result.assets) return [];
+  return result.assets.map(toResult).filter((r): r is ImageResult => r !== null);
 }

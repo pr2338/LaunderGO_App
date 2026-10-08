@@ -6,25 +6,25 @@ interface EnvConfig {
   webviewUrl: string;
   baseUrl: string;
   enableLogging: boolean;
-  razorpayKeyId: string;
 }
 
+// The web app serves the mobile UI when it sees ?platform=app. The native
+// User-Agent suffix (see APP_CONFIG.userAgentSuffix) identifies the app on
+// every later request, after client-side navigation drops the query param.
 const DEV: EnvConfig = {
   env: 'development',
   apiBaseUrl: 'https://laundergo.in/api',
-  webviewUrl: 'https://laundergo.in/schedule',
+  webviewUrl: 'https://laundergo.in/?platform=app',
   baseUrl: 'https://laundergo.in',
   enableLogging: true,
-  razorpayKeyId: 'rzp_test_XXXXXXXXXX',
 };
 
 const PROD: EnvConfig = {
   env: 'production',
   apiBaseUrl: 'https://laundergo.in/api',
-  webviewUrl: 'https://laundergo.in/schedule',
+  webviewUrl: 'https://laundergo.in/?platform=app',
   baseUrl: 'https://laundergo.in',
   enableLogging: false,
-  razorpayKeyId: 'rzp_live_XXXXXXXXXX',
 };
 
 const ENV: Environment = __DEV__ ? 'development' : 'production';
