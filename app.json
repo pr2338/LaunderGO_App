@@ -141,6 +141,9 @@
         "projectId": "b4575749-1aef-400e-a654-33b9d67c8995"
       }
     },
-    "owner": "shubham2338"
+    "owner": "shubham2338",
+    "androidNavigationBar": {
+      "enforceContrast": false
+    }
   }
 }

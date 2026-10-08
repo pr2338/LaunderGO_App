@@ -121,10 +121,63 @@ export const INJECTED_JAVASCRIPT = `
       meta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover');
 
       var style = document.createElement('style');
-      // touch-action removes the double-tap-zoom delay without swallowing fast taps
-      style.textContent = 'html,body{overflow-x:hidden;max-width:100vw;-webkit-tap-highlight-color:transparent}' +
-        '*{touch-action:manipulation}';
+      // overflow-x:clip (not hidden): hidden turns <body> into a scroll container,
+      // which breaks position:sticky headers. touch-action on <html> applies to
+      // the whole page and removes the tap delay without swallowing fast taps.
+      style.textContent = 'html,body{overflow-x:clip;-webkit-tap-highlight-color:transparent}' +
+        'html{touch-action:manipulation}';
       document.head.appendChild(style);
+    } catch (e) {}
+    startEdgeColorSync();
+  }
+
+  // ── Match native status-bar / home-indicator strips to the page ──────
+  // Samples the background colour of whatever sits at the very top (header)
+  // and very bottom (bottom navigation) of the viewport.
+  function toHex(rgb) {
+    var m = /rgba?\\(([\\d.]+),\\s*([\\d.]+),\\s*([\\d.]+)(?:,\\s*([\\d.]+))?/.exec(rgb || '');
+    if (!m || (m[4] !== undefined && parseFloat(m[4]) < 0.5)) return null;
+    return '#' + [m[1], m[2], m[3]].map(function(v) {
+      var h = Math.round(parseFloat(v)).toString(16);
+      return h.length === 1 ? '0' + h : h;
+    }).join('');
+  }
+  function colorAt(y) {
+    var el = document.elementFromPoint(window.innerWidth / 2, y);
+    while (el && el.nodeType === 1) {
+      var hex = toHex(getComputedStyle(el).backgroundColor);
+      if (hex) return hex;
+      el = el.parentElement;
+    }
+    return toHex(getComputedStyle(document.body).backgroundColor) ||
+      toHex(getComputedStyle(document.documentElement).backgroundColor) || '#ffffff';
+  }
+  var lastTop = null, lastBottom = null, syncTimer = null;
+  function syncEdgeColors() {
+    try {
+      var top = colorAt(1);
+      var bottom = colorAt(window.innerHeight - 1);
+      if (top !== lastTop || bottom !== lastBottom) {
+        lastTop = top; lastBottom = bottom;
+        post({ type: 'EDGE_COLORS', payload: { top: top, bottom: bottom } });
+      }
+    } catch (e) {}
+  }
+  function scheduleSync(delay) {
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(syncEdgeColors, delay || 120);
+  }
+  window.__syncEdgeColors = syncEdgeColors;
+  function startEdgeColorSync() {
+    syncEdgeColors();
+    window.addEventListener('load', function() { scheduleSync(50); });
+    window.addEventListener('scroll', function() { scheduleSync(150); }, { passive: true });
+    window.addEventListener('resize', function() { scheduleSync(150); });
+    window.addEventListener('popstate', function() { scheduleSync(300); });
+    // Client-side route changes and late-mounting headers/nav bars.
+    try {
+      new MutationObserver(function() { scheduleSync(250); })
+        .observe(document.body, { childList: true, subtree: true });
     } catch (e) {}
   }
   if (document.readyState === 'loading') {

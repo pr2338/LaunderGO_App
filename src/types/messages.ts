@@ -75,6 +75,17 @@ export interface SetThemeMessage extends BaseMessage {
     headerColor: string;
     statusBarColor: string;
     secondaryColor?: string;
+    /** Colour of the strip below the bottom navigation (home indicator / Android nav bar). */
+    navigationBarColor?: string;
+  };
+}
+
+/** Sent automatically by the injected bridge; colours sampled from the page edges. */
+export interface EdgeColorsMessage extends BaseMessage {
+  type: 'EDGE_COLORS';
+  payload: {
+    top: string;
+    bottom: string;
   };
 }
 
@@ -88,4 +99,5 @@ export type WebViewMessage =
   | EnableDriverModeMessage
   | DisableDriverModeMessage
   | RazorpayPaymentMessage
-  | SetThemeMessage;
+  | SetThemeMessage
+  | EdgeColorsMessage;

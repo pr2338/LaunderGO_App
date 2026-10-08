@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
+import * as NavigationBar from 'expo-navigation-bar';
 import { StyleSheet, View, Linking, Platform, Vibration, ToastAndroid, AppState } from 'react-native';
 import { WebView, WebViewNavigation, WebViewMessageEvent } from 'react-native-webview';
 import type { ShouldStartLoadRequest } from 'react-native-webview/lib/WebViewTypes';
@@ -12,6 +13,7 @@ import { useBackHandler } from './src/hooks/useBackHandler';
 import { getCurrentLocation } from './src/services/location';
 import { launchCamera, launchImageLibrary } from './src/services/camera';
 import { ErrorScreen } from './src/components/ErrorScreen';
+import { LoadingBar, type LoadingBarHandle } from './src/components/LoadingBar';
 import {
   INJECTED_JAVASCRIPT,
   createLocationSuccessScript,
@@ -125,6 +127,17 @@ function MainApp() {
   const [hasError, setHasError] = useState(false);
   const [canGoBack, setCanGoBack] = useState(false);
   const [statusBarColor, setStatusBarColor] = useState<string>(APP_CONFIG.primaryColor);
+  const [bottomBarColor, setBottomBarColor] = useState<string>(APP_CONFIG.backgroundColor);
+  // Once the web app sets a colour explicitly (SET_THEME), auto-detection stops overriding it.
+  const topColorLockedRef = useRef(false);
+  const bottomColorLockedRef = useRef(false);
+  const loadingBarRef = useRef<LoadingBarHandle>(null);
+
+  // Android 3-button nav: dark icons on light bars, light icons on dark bars.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    NavigationBar.setButtonStyleAsync(isLightColor(bottomBarColor) ? 'dark' : 'light').catch(() => {});
+  }, [bottomBarColor]);
 
   const goBack = useCallback(() => webViewRef.current?.goBack(), []);
   useBackHandler(canGoBack, goBack);
@@ -347,8 +360,23 @@ function MainApp() {
             break;
 
           case MESSAGE_TYPES.SET_THEME: {
-            const color = message.payload?.statusBarColor;
-            setStatusBarColor(color && HEX_COLOR.test(color) ? color : APP_CONFIG.primaryColor);
+            const top = message.payload?.statusBarColor;
+            if (top && HEX_COLOR.test(top)) {
+              topColorLockedRef.current = true;
+              setStatusBarColor(top);
+            }
+            const bottom = message.payload?.navigationBarColor;
+            if (bottom && HEX_COLOR.test(bottom)) {
+              bottomColorLockedRef.current = true;
+              setBottomBarColor(bottom);
+            }
+            break;
+          }
+
+          case MESSAGE_TYPES.EDGE_COLORS: {
+            const { top, bottom } = message.payload || ({} as { top?: string; bottom?: string });
+            if (!topColorLockedRef.current && top && HEX_COLOR.test(top)) setStatusBarColor(top);
+            if (!bottomColorLockedRef.current && bottom && HEX_COLOR.test(bottom)) setBottomBarColor(bottom);
             break;
           }
         }
@@ -393,8 +421,19 @@ function MainApp() {
     return false;
   }, []);
 
+  const handleLoadStart = useCallback(() => {
+    webReadyRef.current = false;
+    loadingBarRef.current?.start();
+  }, []);
+
+  const handleLoadProgress = useCallback(
+    (e: { nativeEvent: { progress: number } }) => loadingBarRef.current?.progress(e.nativeEvent.progress),
+    []
+  );
+
   const handleLoadEnd = useCallback(() => {
     webReadyRef.current = true;
+    loadingBarRef.current?.finish();
     hideSplash();
 
     const pending = pendingNavigationRef.current;
@@ -448,9 +487,8 @@ function MainApp() {
           overScrollMode="never"
           textZoom={100}
           webviewDebuggingEnabled={__DEV__}
-          onLoadStart={() => {
-            webReadyRef.current = false;
-          }}
+          onLoadStart={handleLoadStart}
+          onLoadProgress={handleLoadProgress}
           onLoadEnd={handleLoadEnd}
           onNavigationStateChange={handleNavigationChange}
           onError={handleLoadError}
@@ -459,6 +497,7 @@ function MainApp() {
           onContentProcessDidTerminate={handleProcessGone}
           onRenderProcessGone={handleProcessGone}
         />
+        <LoadingBar ref={loadingBarRef} color={APP_CONFIG.primaryColor} />
         {hasError && (
           <View style={StyleSheet.absoluteFill}>
             <ErrorScreen onRetry={handleRetry} />
@@ -466,7 +505,7 @@ function MainApp() {
         )}
       </View>
 
-      <View style={{ height: insets.bottom, backgroundColor: APP_CONFIG.backgroundColor }} />
+      <View style={{ height: insets.bottom, backgroundColor: bottomBarColor }} />
     </View>
   );
 }
