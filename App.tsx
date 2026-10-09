@@ -496,6 +496,8 @@ function MainApp() {
           mediaPlaybackRequiresUserAction={false}
           bounces={false}
           overScrollMode="never"
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
           textZoom={100}
           webviewDebuggingEnabled={__DEV__}
           onLoadStart={handleLoadStart}
