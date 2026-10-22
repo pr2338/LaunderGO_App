@@ -49,3 +49,8 @@ export function resolveAppUrl(pathOrUrl: string): string | null {
   }
   return isTrustedBridgeOrigin(pathOrUrl) ? withPlatformParam(pathOrUrl) : null;
 }
+
+/** Legacy pushes link to "/orders/<id>", which the website serves at "/dashboard/orders/<id>". */
+export function normalizeOrderPath(pathOrUrl: string): string {
+  return pathOrUrl.replace(/^\/orders\//, '/dashboard/orders/');
+}

@@ -126,6 +126,7 @@
         {
           "ios": {
             "useFrameworks": "static",
+            
             "forceStaticLinking": [
               "RNFBApp",
               "RNFBMessaging"

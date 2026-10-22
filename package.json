@@ -7,6 +7,7 @@
     "build": "eas build --platform android --profile production",
     "build:preview": "eas build --platform android --profile preview",
     "build:ios": "eas build --platform ios --profile production",
+    "build:ios:preview": "eas build --platform ios --profile preview",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "typecheck": "tsc --noEmit",

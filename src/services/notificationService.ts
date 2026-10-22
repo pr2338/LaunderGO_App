@@ -2,6 +2,9 @@ import messaging from '@react-native-firebase/messaging';
 import { Platform, PermissionsAndroid } from 'react-native';
 import Sound from 'react-native-sound';
 import { logger } from '../utils/logger';
+import { NOTIFICATION_CONFIG } from '../config/constants';
+
+const NEW_ORDER_TYPE = NOTIFICATION_CONFIG.newOrderType;
 
 // mixWithOthers: don't stop the user's music just because the app launched.
 Sound.setCategory('Playback', true);
@@ -75,7 +78,8 @@ export function setupFCMListeners(
     
     logger.log('[FCM] Foreground message:', { title, body, type: data.type });
     
-    if (data.type === 'NEW_ORDER' || data.playSound === 'true') {
+    // The order alert is reserved for new orders; everything else is silent here.
+    if (data.type === NEW_ORDER_TYPE) {
       playAlertSound();
     }
     

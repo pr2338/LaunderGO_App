@@ -32,6 +32,11 @@ export const TRUSTED_BRIDGE_HOSTS = ['laundergo.in'];
 export const NOTIFICATION_CONFIG = {
   channelId: 'laundergo-notifications',
   channelName: 'LaunderGo',
+  // New-order pushes: data.type === newOrderType, sent on newOrderChannelId
+  // (Android) / with sound newOrderIosSound (iOS). See plugins/withAlertSound.js.
+  newOrderType: 'NEW_ORDER',
+  newOrderChannelId: 'new_orders',
+  newOrderIosSound: 'alert_sound.caf',
   vibrationPattern: [0, 250, 250, 250] as number[],
 };
 

@@ -33,6 +33,7 @@ import {
   isAllowedInWebView,
   isTrustedBridgeOrigin,
   resolveAppUrl,
+  normalizeOrderPath,
   hasPlatformParam,
   withPlatformParam,
 } from './src/utils/url';
@@ -197,8 +198,9 @@ function MainApp() {
 
       // Priority: url > screen+orderId > screen
       let target: string | null = null;
-      if (data?.url) target = resolveAppUrl(data.url);
-      else if (data?.screen === 'orders' && data?.orderId) target = resolveAppUrl(`/orders/${encodeURIComponent(data.orderId)}`);
+      if (data?.url) target = resolveAppUrl(normalizeOrderPath(data.url));
+      else if (data?.click_action) target = resolveAppUrl(normalizeOrderPath(data.click_action));
+      else if (data?.orderId) target = resolveAppUrl(`/dashboard/orders/${encodeURIComponent(data.orderId)}`);
       else if (data?.screen) target = resolveAppUrl(`/${encodeURIComponent(data.screen)}`);
 
       if (target) navigateTo(target);
@@ -342,7 +344,10 @@ function MainApp() {
           case MESSAGE_TYPES.ENABLE_DRIVER_MODE: {
             const granted = await requestDriverPermissions();
             if (granted) {
-              await startTracking(coords => dispatchToWeb('DRIVER_LOCATION', coords));
+              await startTracking(
+                coords => dispatchToWeb('DRIVER_LOCATION', coords),
+                () => authDataRef.current?.jwt ?? null
+              );
               dispatchToWeb('DRIVER_MODE_ENABLED', { enabled: true });
             } else {
               dispatchToWeb('DRIVER_MODE_ENABLED', { enabled: false, error: 'Permission denied' });
@@ -507,6 +512,7 @@ function MainApp() {
           onError={handleLoadError}
           onMessage={handleMessage}
           onShouldStartLoadWithRequest={handleShouldStartLoad}
+          androidLayerType="hardware"
           onContentProcessDidTerminate={handleProcessGone}
           onRenderProcessGone={handleProcessGone}
         />
